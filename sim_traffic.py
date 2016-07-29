@@ -1,6 +1,8 @@
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import random
+#%matplotlib inline
 
 
 class RoadError(Exception):
@@ -12,7 +14,7 @@ class CrashError(Exception):
 
 
 class Car:
-    def __init__(self, pos, road_len, index=1, length=5, max_speed=120):
+    def __init__(self, pos, road_len, index=1, length=5, max_speed=(120.0/3.6)):
         self.road_len = road_len
         self.length = length
         self.pos = pos
@@ -105,8 +107,28 @@ class Road:
 
 
 def main():
+    time = 0
     road = Road(1000, 30)
-    # print([car_list[0].pos[0], car_list[1].pos[0], car_list[2].pos[0]])
+    while time < 60:
+        for i in range(len(road.car_list)):
+            if i == len(road.car_list) - 1:
+                road.car_list[i].drive(time, road.car_list[0])
+            else:
+                road.car_list[i].drive(time, road.car_list[i+1])
+        time += 1
+    full_data = pd.concat([car.hist for car in road.car_list])
+    full_data.plot(kind='scatter', x='back', y='time', figsize=(10, 10)).invert_yaxis()
+    mean_speed = full_data['speed'].mean()
+    std_dev_speed = full_data['speed'].std()
+    print("""
+Mean Speed: {}
+Std Dev Speed: {}
+Optimal Speed: {}
+    """.format(mean_speed, std_dev_speed, mean_speed + std_dev_speed))
+
+
+
+
 
 if __name__ == '__main__':
     main()
