@@ -49,29 +49,22 @@ class Car:
         self.front = self.back + self.length
         self.road = road
         self.speed = speed
+        self.history = DataFrame()
 
-    def drive(self):
-""" v ← min(v + 1, vmax)
-    v ← min(v, d − 1)
-    v ← max(0, v − 1) with probability p
-    x ← x + v.
-"""
+    def drive(self, time, car_in_front_back):
+        """ v ← min(v + 1, vmax)
+            v ← min(v, d − 1)
+            v ← max(0, v − 1) with probability p
+            x ← x + v.
+        """
+        self.speed = min(self.speed + self.accel, self.max_speed)
+        self.speed = min(self.speed, dist_to_next_car() - 1) # TODO: dist_to_next_car() function
+        if random.randint(1,10) = 1:
+            self.speed = max(0, self.speed - 2)
+        self.back = self.back + self.speed
+        self.front = self.front + self.speed
 
-        initial_speed = self.speed
-        final_speed = self.speed + self.accel
-        avg_speed = np.mean([initial_speed, final_speed])
-
-        self.speed = final_speed
-
-        self.back += avg_speed
-
-        """Simulates one second of driving"""
-        #if room to accelerate: accelerate
-        #if car too close
-         #self.position = self.position + (self.speed)
-         #self.speed = seconds * self.speed
-
-         self.end_of_road()
+        self.end_of_road()
 
     def random_slow(self):
         if random.randint(1, 10) == 1:
@@ -113,20 +106,23 @@ class Road:
 
 
 def main():
-    time = 60
+    time = 0
     crash_count = 0
     road = Road(1000) #
     car1 = Car(road)
-    while time > 0:
+    while time < 60:
         # TODO: Once function is finalized: this will be a loop through the Road object's array of cars
-        car1.drive()
+        for i in range(len(road.cars)):
+            road.cars[i].drive(time, road.cars[i+1])
+
+        car1.drive(time)
         print("""
 time: {},
 speed: {}
 accel: {}
 back: {}
 """.format(time, car1.speed, car1.accel, car1.back))
-        time -= 1
+        time += 1
 
 
 if __name__ == '__main__':
