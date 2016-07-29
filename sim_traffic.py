@@ -5,10 +5,10 @@ import random
 
 class Car:
     def __init__(self, pos, road_len, index=1):
-        self.road_length = road_len
+        self.road_len = road_len
         self.pos = pos
         # position = [back, front], cars are assumed to have 5m length
-        self.position = self.updateposition()
+        self.updateposition()
         self.index = str(index)
         # self.car_in_front = None
         self.speed = 2
