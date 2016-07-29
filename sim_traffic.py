@@ -1,36 +1,44 @@
-import numpy as np
 import pandas as pd
 import random
+import math
+
+
+class RoadError(Exception):
+    pass
+
+
+class CrashError(Exception):
+    pass
 
 
 class Car:
-    def __init__(self, pos, road_len, index=1):
+    def __init__(self, pos, road_len, index=1,
+                 length=5, max_speed=(120.0/3.6)):
         self.road_len = road_len
+        self.length = length
         self.pos = pos
-        # position = [back, front], cars are assumed to have 5m length
-        self.updateposition()
-        self.index = str(index)
-        # self.car_in_front = None
+        self.update_position()
+        self.index = index
         self.speed = 2
+        self.max_speed = max_speed
         self.v = [self.speed]  # list of speed points
-        self.x = [self.pos]  # list of position points
-        self.hist = pd.DataFrame({'speed': self.speed,
-                                  'back': self.position[0],
-                                  'time': 0,
-                                  'carID': self.index})
+        self.hist = pd.DataFrame({'speed': [self.speed],
+                                  'back': [self.back],
+                                  'time': [0],
+                                  'carID': [self.index]})
 
-    def updateposition(self):
-        self.position = [self.pos % self.road_len,
-                         (self.pos + 5) % self.road_len]
+    def update_position(self):
+        self.back = self.pos % self.road_len
+        self.front = (self.pos + self.length) % self.road_len
 
     def dist_to_car_in_front(self, cif):
-        if cif.pos[0] > self.pos[1]:
-            return cif.pos[0] - self.pos[1]
-        # This else statement considers that when a car loops back to the
-        # beginning of the road, the difference between the car in front will
-        # be a negative number
+        if self.front < cif.back:
+            return cif.back - self.front
+        elif self.front - cif.back > 2 * self.length:
+            return cif.back + self.road_len - self.front
         else:
-            return (cif.pos[0] + self.road_len) - self.pos[1]
+            raise CrashError("Oh the humanity! {} crashed into {}."
+                             .format(self.index, cif.index))
 
     # Drivers want at least a number of meters equal to their speed in
     # meters/second between them and the next car.
@@ -38,7 +46,7 @@ class Car:
     # have room to do so.
     def can_accelerate(self, cif):
         return (self.dist_to_car_in_front(cif) >= self.speed
-                and self.speed < 120)
+                and self.speed < self.max_speed)
 
     # Drivers will randomly (10% chance each second) slow by 2 m/s.
     def is_shitty_driver(self):
@@ -59,35 +67,54 @@ class Car:
 
         self.v.append(self.speed)
         self.pos += self.v[-2]
-        self.updateposition()
-        self.x.append(self.pos)
-        new_position = pd.DataFrame({'speed': self.speed,
-                                     'back': self.position[0],
-                                     'time': time,
-                                     'carID': self.index})
-        self.hist = self.hist.append(new_position)
+        # Car progresses by speed chosen in the previous second
+        self.update_position()
+        new_position = pd.DataFrame({'speed': [self.speed],
+                                     'back': [self.back],
+                                     'time': [time],
+                                     'carID': [self.index]})
+        self.hist = self.hist.append(new_position).reset_index(drop=True)
 
 
 class Road:
     def __init__(self, length=1000, num_cars=30):
         self.length = length
         self.num_cars = num_cars
-
-    def populate_road(self):
         self.car_list = []
         pos = 0
         for idx in range(self.num_cars):
-            self.car_list.append(Car(pos, self.length, self.num_cars - idx))
+            self.car_list.append(Car(pos, self.length, idx + 1))
             if len(self.car_list) > 1:
                 self.car_list[-2].car_in_front = self.car_list[-1]
             pos += self.length / self.num_cars
-        # return car_list
+
+        if sum([car.length for car in self.car_list]) > self.length:
+            raise RoadError("Not enough room for the cars!")
 
 
 def main():
+    time = 0
     road = Road(1000, 30)
-    road.populate_road()
-    # print([car_list[0].pos[0], car_list[1].pos[0], car_list[2].pos[0]])
+    while time < 60:
+        for i in range(len(road.car_list)):
+            if i == len(road.car_list) - 1:
+                road.car_list[i].drive(time, road.car_list[0])
+            else:
+                road.car_list[i].drive(time, road.car_list[i+1])
+        time += 1
+    full_data = pd.concat([car.hist for car in road.car_list])
+    full_data.plot(kind='scatter', x='back', y='time',
+                   figsize=(12, 12)).invert_yaxis()
+    mean_speed = full_data['speed'].mean()
+    std_dev_speed = full_data['speed'].std()
+    optimal_speed = mean_speed + std_dev_speed
+    print("""
+Mean Speed: {}
+Std Dev Speed: {}
+Optimal Speed: {}
+Legal Speed: {}
+    """.format(mean_speed, std_dev_speed,
+               optimal_speed, math.floor(optimal_speed)))
 
 
 if __name__ == '__main__':
