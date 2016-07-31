@@ -1,6 +1,8 @@
 import pandas as pd
 import random
 import math
+from matplotlib import cm
+import seaborn
 
 
 class RoadError(Exception):
@@ -34,7 +36,7 @@ class Car:
     def dist_to_car_in_front(self, cif):
         if self.front < cif.back:
             return cif.back - self.front
-        elif self.front - cif.back > 2 * self.length:
+        elif self.front > cif.back and (self.front - cif.front) > self.length:
             return cif.back + self.road_len - self.front
         else:
             raise CrashError("Oh the humanity! {} crashed into {}."
@@ -103,8 +105,11 @@ def main():
                 road.car_list[i].drive(time, road.car_list[i+1])
         time += 1
     full_data = pd.concat([car.hist for car in road.car_list])
-    full_data.plot(kind='scatter', x='back', y='time',
-                   figsize=(12, 12)).invert_yaxis()
+    cmap = cm.get_cmap('plasma')
+    full_data.plot(kind='scatter', x='back', y='time', c='carID', cmap=cmap,
+                   colorbar=False, figsize=(16, 10),
+                   title='Simulation', xlim=(-5, road.length + 5),
+                   ylim=(-1, time + 1)).invert_yaxis()
     mean_speed = full_data['speed'].mean()
     std_dev_speed = full_data['speed'].std()
     optimal_speed = mean_speed + std_dev_speed
