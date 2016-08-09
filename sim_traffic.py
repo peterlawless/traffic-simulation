@@ -2,7 +2,6 @@ import pandas as pd
 import random
 import math
 from matplotlib import cm
-import seaborn
 
 
 class RoadError(Exception):
@@ -24,12 +23,15 @@ class Car:
         self.speed = 2
         self.max_speed = max_speed
         self.v = [self.speed]  # list of speed points
+        # Log driver history for plotting later
         self.hist = pd.DataFrame({'speed': [self.speed],
                                   'back': [self.back],
                                   'time': [0],
                                   'carID': [self.index]})
 
     def update_position(self):
+        """This function creates the back attribute and ensures the road is
+        functioning as if it is a loop."""
         self.back = self.pos % self.road_len
         self.front = (self.pos + self.length) % self.road_len
 
